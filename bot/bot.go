@@ -123,20 +123,18 @@ func (f *Follower) Start(window *gocv.Window) error {
 
 	net := gocv.ReadNetFromCaffe(f.protoPath, f.modelPath)
 	if net.Empty() {
-		errors.New("error reading network model")
+		return errors.New("error reading network model")
 	}
 	defer net.Close()
 
 	for {
 		outData := make([]byte, frameSize)
 		if _, err := io.ReadFull(f.ffmpegOut, outData); err != nil {
-			fmt.Println(err)
-			continue
+			return err
 		}
 		img, err := gocv.NewMatFromBytes(frameY, frameX, gocv.MatTypeCV8UC3, outData)
 		if err != nil {
-			fmt.Println(err)
-			continue
+			return err
 		}
 		if img.Empty() {
 			continue
@@ -255,35 +253,35 @@ func (f *Follower) handleKeystick() {
 			f.tracking = !f.tracking
 			if f.tracking {
 				f.detectSize = true
-				println("tracking")
+				fmt.Println("tracking")
 			} else {
 				f.detectSize = false
-				println("not tracking")
+				fmt.Println("not tracking")
 			}
 		case keyboard.U:
 			f.drone.TakeOff()
-			println("Takeoff")
+			fmt.Println("Takeoff")
 		case keyboard.D:
 			f.drone.Land()
-			println("Land")
+			fmt.Println("Land")
 		case keyboard.ArrowUp:
 			f.drone.Up(5)
-			println("up")
+			fmt.Println("up")
 		case keyboard.ArrowDown:
 			f.drone.Down(5)
-			println("down")
+			fmt.Println("down")
 		case keyboard.ArrowLeft:
 			f.drone.Left(5)
-			println("left")
+			fmt.Println("left")
 		case keyboard.ArrowRight:
 			f.drone.Right(5)
-			println("right")
+			fmt.Println("right")
 		case keyboard.Q:
 			f.drone.Clockwise(5)
-			println("clockwise")
+			fmt.Println("clockwise")
 		case keyboard.E:
 			f.drone.CounterClockwise(5)
-			println("counter clockwise")
+			fmt.Println("counter clockwise")
 
 		}
 	})
