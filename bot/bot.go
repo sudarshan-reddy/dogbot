@@ -13,6 +13,7 @@ import (
 
 	"gobot.io/x/gobot"
 	"gobot.io/x/gobot/platforms/dji/tello"
+	"gobot.io/x/gobot/platforms/keyboard"
 	"gocv.io/x/gocv"
 )
 
@@ -111,7 +112,7 @@ func (f *Follower) init(cmd *exec.Cmd) error {
 
 // Start the drone.
 // Not threadsafe at all. Doesn't have to be.
-func (f *Follower) Start() {
+func (f *Follower) Start(window *gocv.Window) {
 	frameSize := frameX * frameY * 3
 	refDistance := float64(0)
 	detected := false
@@ -119,7 +120,6 @@ func (f *Follower) Start() {
 	top := float32(0)
 	right := float32(0)
 	bottom := float32(0)
-	var window = gocv.NewWindow("Tello")
 	var tracking = false
 	var detectSize = false
 	var distTolerance = 0.05 * dist(0, 0, frameX, frameY)
@@ -215,6 +215,11 @@ func (f *Follower) Start() {
 
 }
 
+// Stop lands the drone.
+func (f *Follower) Stop() {
+	f.drone.Land()
+}
+
 func dist(x1, y1, x2, y2 float32) float64 {
 	return math.Sqrt(float64((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)))
 }
@@ -231,4 +236,50 @@ func max(a, b float32) float32 {
 		return a
 	}
 	return b
+}
+
+func handleKeystick() {
+	keys.On(keyboard.Key, func(data interface{}) {
+		key := data.(keyboard.KeyEvent)
+		k := key.Key
+		switch k {
+		case keyboard.T:
+			drone.Forward(0)
+			drone.Up(0)
+			drone.Clockwise(0)
+			tracking = !tracking
+			if tracking {
+				detectSize = true
+				println("tracking")
+			} else {
+				detectSize = false
+				println("not tracking")
+			}
+		case keyboard.U:
+			drone.TakeOff()
+			println("Takeoff")
+		case keyboard.D:
+			drone.Land()
+			println("Land")
+		case keyboard.ArrowUp:
+			drone.Up(5)
+			println("up")
+		case keyboard.ArrowDown:
+			drone.Down(5)
+			println("down")
+		case keyboard.ArrowLeft:
+			drone.Left(5)
+			println("left")
+		case keyboard.ArrowRight:
+			drone.Right(5)
+			println("right")
+		case keyboard.Q:
+			drone.Clockwise(5)
+			println("clockwise")
+		case keyboard.E:
+			drone.CounterClockwise(5)
+			println("counter clockwise")
+
+		}
+	})
 }
