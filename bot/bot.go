@@ -20,7 +20,7 @@ import (
 const (
 	frameX = 400
 	frameY = 300
-	port   = "8888"
+	port   = "8890"
 )
 
 // Follower follows your face
@@ -29,10 +29,13 @@ type Follower struct {
 	ffmpegOut  io.ReadCloser
 	drone      *tello.Driver
 	flightData *tello.FlightData
-	net        gocv.Net
 	green      color.RGBA
-	protoPath  string
-	modelPath  string
+	keys       *keyboard.Driver
+	tracking   bool
+	detectSize bool
+
+	protoPath string
+	modelPath string
 }
 
 // NewFollower creates a new instance of Follower.
@@ -49,19 +52,13 @@ func NewFollower(protoPath, modelPath string) (*Follower, error) {
 		return nil, err
 	}
 
-	net := gocv.ReadNetFromCaffe(protoPath, modelPath)
-	if net.Empty() {
-		return nil, errors.New("error reading network model")
-	}
-	defer net.Close()
-
 	f := &Follower{
 		ffmpegIn:  ffmpegIn,
 		ffmpegOut: ffmpegOut,
 		drone:     tello.NewDriver(port),
-		net:       net,
 		protoPath: protoPath,
 		modelPath: modelPath,
+		keys:      keyboard.NewDriver(),
 		green:     color.RGBA{0, 255, 0, 0},
 	}
 
@@ -73,6 +70,7 @@ func NewFollower(protoPath, modelPath string) (*Follower, error) {
 }
 
 func (f *Follower) init(cmd *exec.Cmd) error {
+	f.handleKeystick()
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -100,6 +98,7 @@ func (f *Follower) init(cmd *exec.Cmd) error {
 
 	robot := gobot.NewRobot("tello",
 		[]gobot.Connection{},
+		[]gobot.Device{f.keys},
 		[]gobot.Device{f.drone},
 	)
 
@@ -112,7 +111,7 @@ func (f *Follower) init(cmd *exec.Cmd) error {
 
 // Start the drone.
 // Not threadsafe at all. Doesn't have to be.
-func (f *Follower) Start(window *gocv.Window) {
+func (f *Follower) Start(window *gocv.Window) error {
 	frameSize := frameX * frameY * 3
 	refDistance := float64(0)
 	detected := false
@@ -120,9 +119,13 @@ func (f *Follower) Start(window *gocv.Window) {
 	top := float32(0)
 	right := float32(0)
 	bottom := float32(0)
-	var tracking = false
-	var detectSize = false
 	var distTolerance = 0.05 * dist(0, 0, frameX, frameY)
+
+	net := gocv.ReadNetFromCaffe(f.protoPath, f.modelPath)
+	if net.Empty() {
+		errors.New("error reading network model")
+	}
+	defer net.Close()
 
 	for {
 		outData := make([]byte, frameSize)
@@ -144,9 +147,9 @@ func (f *Follower) Start(window *gocv.Window) {
 		blob := gocv.BlobFromImage(img, 1.0, image.Pt(128, 96), gocv.NewScalar(104.0, 177.0, 123.0, 0), false, false)
 		defer blob.Close()
 
-		f.net.SetInput(blob, "data")
+		net.SetInput(blob, "data")
 
-		detBlob := f.net.Forward("detection_out")
+		detBlob := net.Forward("detection_out")
 		defer detBlob.Close()
 		detections := gocv.GetBlobChannel(detBlob, 0, 0)
 		defer detections.Close()
@@ -177,12 +180,12 @@ func (f *Follower) Start(window *gocv.Window) {
 			break
 		}
 
-		if !tracking || !detected {
+		if !f.tracking || !detected {
 			continue
 		}
 
-		if detectSize {
-			detectSize = false
+		if f.detectSize {
+			f.detectSize = false
 			refDistance = dist(left, top, right, bottom)
 		}
 
@@ -213,6 +216,8 @@ func (f *Follower) Start(window *gocv.Window) {
 		}
 	}
 
+	return nil
+
 }
 
 // Stop lands the drone.
@@ -238,46 +243,46 @@ func max(a, b float32) float32 {
 	return b
 }
 
-func handleKeystick() {
-	keys.On(keyboard.Key, func(data interface{}) {
+func (f *Follower) handleKeystick() {
+	f.keys.On(keyboard.Key, func(data interface{}) {
 		key := data.(keyboard.KeyEvent)
 		k := key.Key
 		switch k {
 		case keyboard.T:
-			drone.Forward(0)
-			drone.Up(0)
-			drone.Clockwise(0)
-			tracking = !tracking
-			if tracking {
-				detectSize = true
+			f.drone.Forward(0)
+			f.drone.Up(0)
+			f.drone.Clockwise(0)
+			f.tracking = !f.tracking
+			if f.tracking {
+				f.detectSize = true
 				println("tracking")
 			} else {
-				detectSize = false
+				f.detectSize = false
 				println("not tracking")
 			}
 		case keyboard.U:
-			drone.TakeOff()
+			f.drone.TakeOff()
 			println("Takeoff")
 		case keyboard.D:
-			drone.Land()
+			f.drone.Land()
 			println("Land")
 		case keyboard.ArrowUp:
-			drone.Up(5)
+			f.drone.Up(5)
 			println("up")
 		case keyboard.ArrowDown:
-			drone.Down(5)
+			f.drone.Down(5)
 			println("down")
 		case keyboard.ArrowLeft:
-			drone.Left(5)
+			f.drone.Left(5)
 			println("left")
 		case keyboard.ArrowRight:
-			drone.Right(5)
+			f.drone.Right(5)
 			println("right")
 		case keyboard.Q:
-			drone.Clockwise(5)
+			f.drone.Clockwise(5)
 			println("clockwise")
 		case keyboard.E:
-			drone.CounterClockwise(5)
+			f.drone.CounterClockwise(5)
 			println("counter clockwise")
 
 		}
