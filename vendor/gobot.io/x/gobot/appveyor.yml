@@ -1,0 +1,25 @@
+version: "{build}"
+
+os: Windows Server 2012 R2
+
+clone_folder: c:\gopath\src\gobot.io\x\gobot
+
+environment:
+  GOPATH: c:\gopath
+  GOROOT: c:\go
+  GO111MODULE: on
+
+install:
+  - echo %PATH%
+  - echo %GOPATH%
+  - go version
+  - go env
+  - go get -d ./...
+  - go get github.com/stretchr/testify
+
+build_script:
+ - go test -v -cpu=2 .
+ - go test -v -cpu=2 ./drivers/aio
+ - go test -v -cpu=2 ./drivers/gpio
+ - go test -v -cpu=2 ./drivers/i2c
+ - go test -v -cpu=2 ./platforms/firmata/...

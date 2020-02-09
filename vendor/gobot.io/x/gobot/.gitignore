@@ -1,0 +1,12 @@
+.sass-cache
+*.test
+*.swp
+profile.cov
+count.out
+*.swp
+*.snap
+/parts
+/prime
+/stage
+vendor/
+.idea/

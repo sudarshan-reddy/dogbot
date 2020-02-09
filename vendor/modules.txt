@@ -1,0 +1,14 @@
+# github.com/gobuffalo/uuid v2.0.5+incompatible
+github.com/gobuffalo/uuid
+# github.com/gofrs/uuid v3.2.0+incompatible
+github.com/gofrs/uuid
+# github.com/hashicorp/errwrap v1.0.0
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.0.0
+github.com/hashicorp/go-multierror
+# gobot.io/x/gobot v1.14.0
+gobot.io/x/gobot
+gobot.io/x/gobot/platforms/dji/tello
+gobot.io/x/gobot/platforms/keyboard
+# gocv.io/x/gocv v0.22.0
+gocv.io/x/gocv
